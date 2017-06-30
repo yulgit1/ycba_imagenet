@@ -1,4 +1,5 @@
 var request = require("request");
+var srequest = require('sync-request');
 
 exports.parse_imagenet = function (stdout) {
   stdout_lines = stdout.split("\n");
@@ -6,14 +7,27 @@ exports.parse_imagenet = function (stdout) {
   var o = [];
   for (var i = 0, len = stdout_lines.length; i < len - 1; i++) {
     var stdout_line = stdout_lines[i].split("(");
+    var cat_arr = stdout_line[0].split(",");
+    var getties = [];
+    for (var i2 = 0, len2 = cat_arr.length; i2 < len - 1;i2++) {
+      if (cat_arr[i2] === undefined) {
+        continue;
+      }
+      console.log("category1:",cat_arr[i2].trim());
+      getty1 = get_getty(cat_arr[i2].trim());
+      if (getty1 != "") {
+        getties.push(getty1);
+      }
+    }
     var line = {
       category: stdout_line[0].trim(),
+      endpoints: getties,
       score: stdout_line[1].trim().slice(0, -1).split(" ")[2]
     };
     o.push(line);
   }
 
-  console.log('test:',get_getty("vestment"));
+  //console.log('test:',get_getty("vestmentt"));
   return JSON.stringify(o);
 };
 
@@ -26,41 +40,26 @@ function get_getty (keyword) {
     "} ORDER BY ?name";
 
   var q_enc = encodeURIComponent(q);
-  //var q_enc = q;
   console.log("QENC:"+q_enc);
   var u = "http://vocab.getty.edu/sparql.json?query="+q_enc+"&_implicit=false&implicit=true&_equivalent=false&_form=%2Fsparql";
-  //var u = "http://vocab.getty.edu/sparql";
-  //var u = "http://www.google.com";
-  //console.log("URLENC:"+u);
-  //request(u, function (error, response, body) {
-  //  console.log('error:', error); // Print the error if one occurred
-  //  console.log('statusCode:', response && response.statusCode); // Print the response status code if a response was received
-  //  console.log('body:', body); // Print the HTML for the Google homepage.
-  //  var j = JSON.parse(body);
-  //  return j;
-  //});
+  console.log("URLENC:"+u);
 
   var options = {
-    url: u,
     headers: {
       'User-Agent': 'request',
       'accept': 'application/sparql-results+json'
     }
   };
 
-  var ex;
-  function callback(error, response, body) {
-    if (!error && response.statusCode == 200) {
-      var info = JSON.parse(body).results.bindings[0].s.value;
-      //console.log("TRY:",info);
-      //console.log("BB:",body);
-      console.log("IN:",info);
-      ex = info;
-    }
+  var gettyID = "";
+  var res = srequest('GET', u, options);
+  console.log("rawBODY:",JSON.parse(res.getBody()));
+  if (JSON.parse(res.getBody()).results.bindings.length == 0) {
+    console.log("No gettyID found for:", keyword);
+    return "";
+  } else {
+    gettyID = JSON.parse(res.getBody()).results.bindings[0].s.value;
+    console.log("gettyID:",gettyID);
+    return gettyID;
   }
-
-  request(options,callback);
-  console.log("ENDP:",ex);
-
-  return u;
 };
